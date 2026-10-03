@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Domino Online — Demo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0d1720;color:#fff;font-family:Arial,sans-serif;min-height:100vh}
+button{font:inherit;border:0;cursor:pointer}.app{max-width:520px;margin:auto;min-height:100vh;background:linear-gradient(#13222d,#0c151d);padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center}.brand{font-size:22px;font-weight:800}.coins{background:#1d303d;border-radius:20px;padding:8px 13px}
+.screen{display:none}.screen.active{display:block}.hero{text-align:center;padding:42px 10px 24px}.logo{font-size:64px}.hero h1{margin:8px 0;font-size:30px}.hero p{color:#aab8c2}
+.card{background:#172833;border:1px solid #28404e;border-radius:20px;padding:18px;margin:12px 0}
+.primary{width:100%;padding:15px;border-radius:14px;background:#25b66f;color:#fff;font-weight:800;margin-top:10px}.secondary{width:100%;padding:14px;border-radius:14px;background:#223744;color:#fff;margin-top:10px}
+input{width:100%;padding:14px;border-radius:12px;border:1px solid #38515e;background:#0f1b23;color:#fff;text-align:center;font-size:18px;letter-spacing:3px}
+.lobby{text-align:center;padding-top:25px}.roomcode{font-size:34px;letter-spacing:8px;color:#52e394;font-weight:900;margin:15px}
+.players{display:flex;gap:10px}.player{flex:1;background:#10202a;padding:14px;border-radius:15px}.avatar{font-size:34px}
+.game{padding-top:10px}.opponent{display:flex;justify-content:space-between;align-items:center;background:#172833;padding:12px;border-radius:15px}
+.turn{color:#55e497;font-weight:800}.board{margin:14px 0;min-height:260px;border-radius:20px;background:#214c37;padding:18px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;box-shadow:inset 0 0 0 2px #2c6849}
+.tile{width:62px;height:32px;background:#f3eee2;border-radius:6px;color:#17202a;display:flex;box-shadow:0 3px 5px #0008;overflow:hidden}.half{width:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px}.half+ .half{border-right:1px solid #555}.hand{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 15px}.hand .tile{flex:none;width:70px;height:48px;cursor:pointer}.hand .half{font-size:20px}.selected{outline:3px solid #55e497;transform:translateY(-5px)}.actions{display:flex;gap:8px}.actions button{flex:1;padding:12px;border-radius:12px;background:#263d4a;color:#fff}.status{text-align:center;min-height:25px;color:#c8d4db}.result{text-align:center;padding:35px 10px}.win{font-size:58px}.small{color:#8fa2ad;font-size:13px}.danger{background:#7e2c35!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="brand">🀄 Domino Online</div><div class="coins">🪙 1,000</div></div>
+
+  <section id="home" class="screen active">
+    <div class="hero"><div class="logo">🀄</div><h1>Domino Online</h1><p>نموذج تجريبي للعبة دومينو 1 ضد 1</p></div>
+    <div class="card">
+      <button class="primary" onclick="show('lobby')">🎮 إنشاء غرفة</button>
+      <button class="secondary" onclick="joinPrompt()">🔑 دخول غرفة</button>
+      <button class="secondary" onclick="startBot()">🤖 تجربة ضد الكمبيوتر</button>
+    </div>
+    <div class="card"><b>الحساب التجريبي</b><p class="small">لا يوجد اتصال بسيرفر في هذا النموذج. اللعب المحلي ضد الكمبيوتر فقط.</p></div>
+  </section>
+
+  <section id="lobby" class="screen">
+    <div class="lobby">
+      <h2>غرفة خاصة</h2><div class="small">أرسل الكود لصديقك</div>
+      <div class="roomcode">A7K92P</div>
+      <div class="players"><div class="player"><div class="avatar">😎</div><b>أنت</b><div class="small">جاهز</div></div><div class="player"><div class="avatar">👤</div><b>بانتظار لاعب</b><div class="small">يمكن تجربة الكمبيوتر</div></div></div>
+      <button class="primary" onclick="startBot()">🤖 بدء مباراة تجريبية</button>
+      <button class="secondary" onclick="show('home')">رجوع</button>
+    </div>
+  </section>
+
+  <section id="game" class="screen">
+    <div class="game">
+      <div class="opponent"><span>🤖 الكمبيوتر</span><span id="oppCount">7 أحجار</span></div>
+      <div class="status" id="status">دورك — اختر حجرًا</div>
+      <div class="board" id="board"></div>
+      <div class="small">أحجارك</div>
+      <div class="hand" id="hand"></div>
+      <div class="actions"><button onclick="draw()">سحب</button><button onclick="pass()">تمرير</button><button class="danger" onclick="show('home')">خروج</button></div>
+    </div>
+  </section>
+
+  <section id="result" class="screen">
+    <div class="result"><div class="win" id="resultIcon">🏆</div><h1 id="resultTitle">فزت!</h1><p id="resultText"></p><button class="primary" onclick="startBot()">🔄 إعادة المباراة</button><button class="secondary" onclick="show('home')">🏠 الرئيسية</button></div>
+  </section>
+</div>
+<script>
+const allTiles=()=>{let a=[];for(let x=0;x<=6;x++)for(let y=x;y<=6;y++)a.push([x,y]);return a};
+let deck=[],hand=[],bot=[],board=[],turn='human',selected=-1;
+
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function tileEl(t,cls=''){let d=document.createElement('div');d.className='tile '+cls;d.innerHTML=`<div class="half">${t[0]}</div><div class="half">${t[1]}</div>`;return d}
+function startBot(){
+ deck=shuffle(allTiles());hand=deck.splice(0,7);bot=deck.splice(0,7);board=[];turn='human';selected=-1;render();show('game');setStatus('دورك — اختر حجرًا');
+}
+function render(){
+ const b=document.getElementById('board');b.innerHTML='';
+ if(!board.length)b.innerHTML='<div class="small">ضع أول حجر لبدء الجولة</div>';
+ board.forEach(t=>b.appendChild(tileEl(t)));
+ const h=document.getElementById('hand');h.innerHTML='';
+ hand.forEach((t,i)=>{let e=tileEl(t,i===selected?'selected':'');e.onclick=()=>selectTile(i);h.appendChild(e)});
+ document.getElementById('oppCount').textContent=bot.length+' أحجار';
+}
+function selectTile(i){
+ if(turn!=='human')return;
+ selected=i;render();
+ if(board.length===0){placeHuman(i,'right');return}
+ const t=hand[i], L=board[0][0], R=board[board.length-1][1];
+ if(t.includes(L)||t.includes(R)){placeHuman(i,t.includes(R)?'right':'left')}
+ else setStatus('هذه الحركة غير صحيحة — اختر حجرًا يطابق أحد الطرفين');
+}
+function orient(t,n){if(n===t[0])return t;return [t[1],t[0]]}
+function placeHuman(i,side){
+ if(i<0||i>=hand.length)return;
+ let t=hand[i];
+ if(board.length===0)board=[t];
+ else if(side==='right'){let R=board[board.length-1][1];if(!t.includes(R))return;board.push(orient(t,R))}
+ else {let L=board[0][0];if(!t.includes(L))return;board.unshift(orient(t,L).reverse())}
+ hand.splice(i,1);selected=-1;
+ if(!hand.length)return endGame(true);
+ turn='bot';render();setStatus('دور الكمبيوتر…');setTimeout(botMove,650);
+}
+function validFor(t){
+ if(!board.length)return true;
+ return t.includes(board[0][0])||t.includes(board[board.length-1][1]);
+}
+function botMove(){
+ if(turn!=='bot')return;
+ let i=bot.findIndex(validFor);
+ if(i<0){if(deck.length){bot.push(deck.pop());render();setTimeout(botMove,450);return}turn='human';render();setStatus('الكمبيوتر مرّر — دورك');return}
+ let t=bot[i],L=board[0][0],R=board[board.length-1][1];
+ if(board.length===0)board=[t];
+ else if(t.includes(R))board.push(orient(t,R));
+ else board.unshift(orient(t,L).reverse());
+ bot.splice(i,1);
+ if(!bot.length)return endGame(false);
+ turn='human';render();setStatus('دورك — اختر حجرًا');
+}
+function draw(){
+ if(turn!=='human')return;
+ if(deck.length){hand.push(deck.pop());render();setStatus('تم سحب حجر — اختر حجرًا مناسبًا');}
+ else setStatus('لا توجد أحجار للسحب');
+}
+function pass(){if(turn!=='human')return;if(hand.some(validFor)){setStatus('لديك حركة ممكنة، لا يمكنك التمرير');return}turn='bot';setStatus('تم التمرير — دور الكمبيوتر');setTimeout(botMove,500)}
+function endGame(humanWin){
+ document.getElementById('resultIcon').textContent=humanWin?'🏆':'😅';
+ document.getElementById('resultTitle').textContent=humanWin?'فزت!':'خسرت';
+ document.getElementById('resultText').textContent=humanWin?'خلصت أحجارك قبل الكمبيوتر 🎉':'الكمبيوتر خلص أحجاره قبلك. جرّب مرة ثانية!';
+ show('result');
+}
+function setStatus(x){document.getElementById('status').textContent=x}
+function joinPrompt(){let c=prompt('أدخل كود الغرفة:');if(c)alert('في النسخة التجريبية لا يوجد سيرفر حقيقي بعد. سنربط الغرف بالـRealtime في النسخة التالية.')}
+</script>
+</body>
+</html>
