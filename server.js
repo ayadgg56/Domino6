@@ -2,7 +2,10 @@ const express=require('express'),http=require('http'),{WebSocketServer}=require(
 const FILE=process.env.DATA_FILE||path.join(__dirname,'data.json');
 let DB={docs:{},keys:{}};try{DB=JSON.parse(fs.readFileSync(FILE,'utf8'))}catch{}
 let tm;const save=()=>{clearTimeout(tm);tm=setTimeout(()=>fs.writeFile(FILE,JSON.stringify(DB),()=>{}),500)};
-const app=express();app.use(express.static(path.join(__dirname,'public')));app.get('/health',(q,r)=>r.send('ok'));
+const app=express();const PUB=fs.existsSync(path.join(__dirname,'public','index.html'))?path.join(__dirname,'public'):null;
+const INDEX=PUB?path.join(PUB,'index.html'):path.join(__dirname,'index.html');
+if(PUB)app.use(express.static(PUB));
+app.get('/',(q,r)=>r.sendFile(INDEX));app.get('/health',(q,r)=>r.send('ok'));
 const server=http.createServer(app),wss=new WebSocketServer({server,path:'/ws',maxPayload:64*1024});
 const subs=new Map(),hash=k=>crypto.createHash('sha256').update(String(k)).digest('hex');
 const pushDoc=p=>{const d=DB.docs[p],m=JSON.stringify({sub:p,exists:!!d,data:d||null});(subs.get(p)||[]).forEach(w=>w.readyState===1&&w.send(m))};
